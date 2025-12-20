@@ -61,23 +61,40 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        # Don't fail if .env file doesn't exist (Databricks Apps uses env vars directly)
+        extra = "ignore"
 
 
 # Global settings instance
 settings = Settings()
 
-# Lazy initialization of Databricks token
-# Token will be fetched on first use instead of at import time
-def _get_token_lazy():
-    """Get token lazily to avoid dbutils import errors at startup"""
-    if not settings.databricks_token:
-        try:
-            settings.databricks_token = get_databricks_token()
-        except Exception as e:
-            # If we can't get the token from dbutils, try from env
-            print(f"Warning: Could not get token from dbutils: {e}")
-            settings.databricks_token = os.getenv("DATABRICKS_TOKEN", "")
-    return settings.databricks_token
+# Token cache to avoid multiple dbutils calls
+_token_cache = None
 
-# Override the property to use lazy loading
-settings.get_token = _get_token_lazy
+def get_token():
+    """
+    Get Databricks token lazily.
+    This function is called instead of accessing settings.databricks_token directly.
+    It fetches the token on first use to avoid dbutils import errors at startup.
+    """
+    global _token_cache
+
+    if _token_cache is not None:
+        return _token_cache
+
+    # Try to get from settings first (might be set via env var)
+    if settings.databricks_token:
+        _token_cache = settings.databricks_token
+        return _token_cache
+
+    # Try to get from dbutils
+    try:
+        _token_cache = get_databricks_token()
+        settings.databricks_token = _token_cache
+        return _token_cache
+    except Exception as e:
+        # If we can't get the token from dbutils, try from env
+        print(f"Warning: Could not get token from dbutils: {e}")
+        _token_cache = os.getenv("DATABRICKS_TOKEN", "")
+        settings.databricks_token = _token_cache
+        return _token_cache

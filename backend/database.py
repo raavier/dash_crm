@@ -5,7 +5,7 @@ Provides connection pooling and query execution utilities.
 from databricks import sql
 from typing import List, Dict, Any, Optional
 from contextlib import contextmanager
-from config import settings
+from config import settings, get_token
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +18,7 @@ class DatabricksConnection:
     def __init__(self):
         self.server_hostname = settings.databricks_host
         self.http_path = settings.databricks_http_path
-        self.access_token = settings.get_token()
+        self.access_token = get_token()
 
     @contextmanager
     def get_connection(self):

@@ -4,7 +4,7 @@ Chatbot API routes - Proxy para Databricks MLFlow Serving Endpoint
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import httpx
-from config import settings
+from config import settings, get_token
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ async def send_chat_message(request: ChatRequest):
 
         # Headers com token Databricks
         headers = {
-            "Authorization": f"Bearer {settings.get_token()}",
+            "Authorization": f"Bearer {get_token()}",
             "Content-Type": "application/json"
         }
 
