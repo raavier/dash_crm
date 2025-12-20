@@ -2,7 +2,7 @@
   "command": [
     "sh",
     "-c",
-    "cd backend && uvicorn main:app --host 0.0.0.0 --port 8000"
+    "echo '=== DEBUG INFO ===' && pwd && echo '--- Python location:' && which python3 && echo '--- Python version:' && python3 --version && echo '--- Pip list:' && python3 -m pip list | grep -i uvicorn && echo '--- PATH:' && echo $PATH && echo '--- Trying uvicorn:' && which uvicorn && echo '--- Starting app:' && cd backend && python3 -m uvicorn main:app --host 0.0.0.0 --port 8000"
   ],
   "env": [
     {
