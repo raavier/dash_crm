@@ -18,7 +18,7 @@ class DatabricksConnection:
     def __init__(self):
         self.server_hostname = settings.databricks_host
         self.http_path = settings.databricks_http_path
-        self.access_token = settings.databricks_token
+        self.access_token = settings.get_token()
 
     @contextmanager
     def get_connection(self):

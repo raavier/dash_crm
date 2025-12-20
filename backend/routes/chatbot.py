@@ -39,7 +39,7 @@ async def send_chat_message(request: ChatRequest):
 
         # Headers com token Databricks
         headers = {
-            "Authorization": f"Bearer {settings.databricks_token}",
+            "Authorization": f"Bearer {settings.get_token()}",
             "Content-Type": "application/json"
         }
 

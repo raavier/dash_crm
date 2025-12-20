@@ -66,11 +66,18 @@ class Settings(BaseSettings):
 # Global settings instance
 settings = Settings()
 
-# Initialize Databricks token (from secrets or env var)
-try:
-    settings.databricks_token = get_databricks_token()
-except Exception as e:
-    # If we can't get the token, try from env (fallback)
-    print(f"Warning: Could not get token from dbutils: {e}")
+# Lazy initialization of Databricks token
+# Token will be fetched on first use instead of at import time
+def _get_token_lazy():
+    """Get token lazily to avoid dbutils import errors at startup"""
     if not settings.databricks_token:
-        settings.databricks_token = os.getenv("DATABRICKS_TOKEN", "")
+        try:
+            settings.databricks_token = get_databricks_token()
+        except Exception as e:
+            # If we can't get the token from dbutils, try from env
+            print(f"Warning: Could not get token from dbutils: {e}")
+            settings.databricks_token = os.getenv("DATABRICKS_TOKEN", "")
+    return settings.databricks_token
+
+# Override the property to use lazy loading
+settings.get_token = _get_token_lazy
