@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create vite@latest . -- --template react-ts)",
+      "Bash(npm install)",
+      "Bash(npm install @chakra-ui/react @chakra-ui/icons @emotion/react @emotion/styled framer-motion recharts axios date-fns react-icons)",
+      "Bash(npm install -D @types/node)",
+      "Bash(npm uninstall @chakra-ui/icons)",
+      "Bash(npm install @chakra-ui/icons@2.1.1)",
+      "Bash(npm run dev)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "next-devtools",
+    "context7",
+    "shadcn",
+    "biome"
+  ]
+}
