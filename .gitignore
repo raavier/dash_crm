@@ -11,3 +11,9 @@ frontend/.env.local
 # Sensitive files
 **/*.env
 !**/.env.example
+
+# Development/testing scripts with tokens
+check_teste_app.py
+deploy_app.py
+get_app_logs.py
+nul
