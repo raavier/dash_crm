@@ -14,10 +14,6 @@
       "value": "/sql/1.0/warehouses/4d81765d86b13aa1"
     },
     {
-      "name": "DATABRICKS_TOKEN",
-      "value": "{{secrets/connectdata-kv-prd/cnx-databricks-hs-community}}"
-    },
-    {
       "name": "FRONTEND_URL",
       "value": "{{app.url}}"
     },
