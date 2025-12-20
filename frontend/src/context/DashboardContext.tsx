@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type {
   DashboardFilters,
   MetricsData,
@@ -25,12 +25,12 @@ interface DashboardContextType {
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
 const getDefaultFilters = (): DashboardFilters => ({
-  organization: 'Vale sem VBM',
+  organization: 'Todas',
   location: 'All',
   verificationType: 'All',
   dateRange: {
-    start: new Date(new Date().getFullYear(), 0, 1), // 1º de janeiro do ano atual
-    end: new Date(new Date().getFullYear(), 11, 31), // 31 de dezembro do ano atual
+    start: new Date('2024-01-01'), // Start from 2024 to include historical data
+    end: new Date(new Date().getFullYear(), 11, 31), // End of current year
   },
 });
 

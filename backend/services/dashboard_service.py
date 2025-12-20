@@ -15,6 +15,7 @@ from models.dashboard import (
     FilterOptions,
     FilterOption
 )
+from cache import cached
 import logging
 
 logger = logging.getLogger(__name__)
@@ -60,9 +61,12 @@ class DashboardService:
         where_clause = " AND ".join(conditions)
         return where_clause, params
 
+    @cached
     def get_metrics(self, filters: DashboardFilters) -> MetricsData:
         """
         Get main metrics: verifications, controls, and questions with non-compliance percentages.
+
+        Uses materialized table crm_metrics_daily for better performance.
 
         Args:
             filters: Dashboard filters
@@ -70,34 +74,46 @@ class DashboardService:
         Returns:
             MetricsData with three metric cards
         """
-        where_clause, params = self._build_where_clause(filters)
+        # Build WHERE clause for materialized table
+        conditions = []
+        params = {}
 
-        # Single optimized query using YES/NOT/ND fields (correct approach)
+        # Date range (required) - query on pre-aggregated data
+        conditions.append("data_referencia BETWEEN :start_date AND :end_date")
+        params['start_date'] = filters.dateRange.start.isoformat()
+        params['end_date'] = filters.dateRange.end.isoformat()
+
+        # Organization filter
+        if filters.organization:
+            conditions.append("organizacao = :organization")
+            params['organization'] = filters.organization
+
+        # Location filter
+        if filters.location:
+            conditions.append("localizacao = :location")
+            params['location'] = filters.location
+
+        # Verification type filter
+        if filters.verificationType:
+            conditions.append("tipo_verificacao = :verification_type")
+            params['verification_type'] = filters.verificationType
+
+        where_clause = " AND ".join(conditions)
+
+        # Query materialized table (simple SUM aggregations)
         query = f"""
         SELECT
-          -- Verificações
-          COUNT(DISTINCT v.ID) as total_verificacoes,
-          COUNT(DISTINCT CASE WHEN q.NOT = 1 THEN v.ID END) as verificacoes_nao_conformes,
-
-          -- Controles Críticos (categorias únicas, exclui ND=1)
-          COUNT(DISTINCT CASE WHEN COALESCE(q.ND, 0) != 1 THEN q.CRITICAL_CONTROL END) as total_controles,
-          COUNT(DISTINCT CASE WHEN q.NOT = 1 THEN q.CRITICAL_CONTROL END) as controles_nao_conformes,
-
-          -- Perguntas (exclui ND=1)
-          COUNT(CASE WHEN COALESCE(q.ND, 0) != 1 THEN 1 END) as total_perguntas,
-          SUM(CASE WHEN q.NOT = 1 THEN 1 ELSE 0 END) as perguntas_nao_conformes
-
-        FROM {self.catalog}.{self.schema}.vw_crm_verification v
-        LEFT JOIN {self.catalog}.{self.schema}.vw_crm_verification_question q
-          ON v.ID = q.VERIFICATION_ID
-        LEFT JOIN {self.catalog}.{self.schema}.vw_crm_location loc
-          ON v.SITE_ID = loc.ID_SITE
-        LEFT JOIN {self.catalog}.{self.schema}.vw_general_de_para_hier_org_unit org
-          ON v.ID_UO = org.id_uo
+          SUM(total_verificacoes) as total_verificacoes,
+          SUM(verificacoes_nao_conformes) as verificacoes_nao_conformes,
+          SUM(total_controles) as total_controles,
+          SUM(controles_nao_conformes) as controles_nao_conformes,
+          SUM(total_perguntas) as total_perguntas,
+          SUM(perguntas_nao_conformes) as perguntas_nao_conformes
+        FROM {self.catalog}.{self.schema}.crm_metrics_daily
         WHERE {where_clause}
         """
 
-        # Execute single query
+        # Execute single query on pre-aggregated data
         result = db.execute_query_single(query, params)
 
         # Calculate percentages
@@ -133,9 +149,12 @@ class DashboardService:
             )
         )
 
+    @cached
     def get_action_priorities(self, filters: DashboardFilters) -> List[ActionPriority]:
         """
         Get action priority distribution (overdue, S=0 to S=4, later).
+
+        Uses materialized table crm_action_priorities_daily for better performance.
 
         Args:
             filters: Dashboard filters
@@ -143,30 +162,34 @@ class DashboardService:
         Returns:
             List of ActionPriority objects
         """
-        where_clause, params = self._build_where_clause(filters)
+        # Build WHERE clause for materialized table
+        conditions = ["data_referencia = CURRENT_DATE()"]  # Latest snapshot
+        params = {}
 
+        # Organization filter
+        if filters.organization:
+            conditions.append("organizacao = :organization")
+            params['organization'] = filters.organization
+
+        # Location filter
+        if filters.location:
+            conditions.append("localizacao = :location")
+            params['location'] = filters.location
+
+        # Verification type filter
+        if filters.verificationType:
+            conditions.append("tipo_verificacao = :verification_type")
+            params['verification_type'] = filters.verificationType
+
+        where_clause = " AND ".join(conditions)
+
+        # Query materialized table (simple SUM aggregation)
         query = f"""
         SELECT
-          CASE
-            WHEN a.END_DATE < CURRENT_DATE AND a.COMPLETED_DATE IS NULL THEN 'Vencidas'
-            WHEN a.PRIORITY = 0 THEN 'S=0'
-            WHEN a.PRIORITY = 1 THEN 'S=1'
-            WHEN a.PRIORITY = 2 THEN 'S=2'
-            WHEN a.PRIORITY = 3 THEN 'S=3'
-            WHEN a.PRIORITY = 4 THEN 'S=4'
-            WHEN a.PRIORITY > 4 THEN 'Posterior a S=4'
-            ELSE 'Outros'
-          END as categoria_prioridade,
-          COUNT(*) as total_acoes
-        FROM {self.catalog}.{self.schema}.vw_crm_action a
-        JOIN {self.catalog}.{self.schema}.vw_crm_verification v
-          ON a.VERIFICATION_ID = v.ID
-        LEFT JOIN {self.catalog}.{self.schema}.vw_crm_location loc
-          ON v.SITE_ID = loc.ID_SITE
-        LEFT JOIN {self.catalog}.{self.schema}.vw_general_de_para_hier_org_unit org
-          ON v.ID_UO = org.id_uo
-        WHERE a.COMPLETED_DATE IS NULL
-          AND {where_clause}
+          categoria_prioridade,
+          SUM(total_acoes) as total_acoes
+        FROM {self.catalog}.{self.schema}.crm_action_priorities_daily
+        WHERE {where_clause}
         GROUP BY categoria_prioridade
         ORDER BY
           CASE categoria_prioridade
@@ -204,9 +227,12 @@ class DashboardService:
             for row in results
         ]
 
+    @cached
     def get_actions(self, filters: DashboardFilters, page: int = 1, page_size: int = 10) -> PaginatedActions:
         """
         Get paginated list of open actions.
+
+        Uses materialized table crm_actions_open_snapshot for better performance.
 
         Args:
             filters: Dashboard filters
@@ -216,43 +242,50 @@ class DashboardService:
         Returns:
             PaginatedActions with data, total count, and pagination info
         """
-        where_clause, params = self._build_where_clause(filters)
+        # Build WHERE clause for materialized table
+        conditions = ["data_snapshot = CURRENT_DATE()"]  # Latest snapshot
+        params = {}
+
+        # Organization filter
+        if filters.organization:
+            conditions.append("organizacao = :organization")
+            params['organization'] = filters.organization
+
+        # Location filter
+        if filters.location:
+            conditions.append("localizacao = :location")
+            params['location'] = filters.location
+
+        # Verification type filter
+        if filters.verificationType:
+            conditions.append("tipo_verificacao = :verification_type")
+            params['verification_type'] = filters.verificationType
+
+        where_clause = " AND ".join(conditions)
 
         # Add pagination parameters
         params['limit'] = page_size
         params['offset'] = (page - 1) * page_size
 
-        # Single query with window function for count
+        # Query materialized snapshot table with window function for count
         data_query = f"""
         SELECT
-          a.ID as id_acao,
-          a.VERIFICATION_ID as id_verificacao,
-          u.FULL_NAME as responsavel,
-          a.END_DATE as data_vencimento_acao,
-          CASE
-            WHEN a.END_DATE < CURRENT_DATE THEN 'Atrasado'
-            ELSE 'Em Andamento'
-          END as status_acao,
-          COALESCE(a.TYPE, 'N/A') as tipo,
+          id_acao,
+          id_verificacao,
+          responsavel,
+          data_vencimento_acao,
+          status_acao,
+          tipo,
           COUNT(*) OVER() as total_count
-        FROM {self.catalog}.{self.schema}.vw_crm_action a
-        JOIN {self.catalog}.{self.schema}.vw_crm_verification v
-          ON a.VERIFICATION_ID = v.ID
-        LEFT JOIN {self.catalog}.{self.schema}.vw_crm_user u
-          ON a.RESPONSIBLE_PERSON_ID = u.USER_ID
-        LEFT JOIN {self.catalog}.{self.schema}.vw_crm_location loc
-          ON v.SITE_ID = loc.ID_SITE
-        LEFT JOIN {self.catalog}.{self.schema}.vw_general_de_para_hier_org_unit org
-          ON v.ID_UO = org.id_uo
-        WHERE a.COMPLETED_DATE IS NULL
-          AND {where_clause}
+        FROM {self.catalog}.{self.schema}.crm_actions_open_snapshot
+        WHERE {where_clause}
         ORDER BY
-          CASE WHEN a.END_DATE < CURRENT_DATE THEN 0 ELSE 1 END,
-          a.END_DATE ASC
+          CASE WHEN status_acao = 'Atrasado' THEN 0 ELSE 1 END,
+          data_vencimento_acao ASC
         LIMIT :limit OFFSET :offset
         """
 
-        # Execute single query
+        # Execute single query on pre-computed snapshot
         data_results = db.execute_query(data_query, params)
 
         # Extract total from first row (window function returns same count for all rows)
@@ -278,6 +311,7 @@ class DashboardService:
             pageSize=page_size
         )
 
+    @cached
     def get_filter_options(self) -> FilterOptions:
         """
         Get available filter options (organizations, locations, verification types).

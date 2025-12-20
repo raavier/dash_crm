@@ -1,0 +1,21 @@
+{
+  "command": [
+    "sh",
+    "-c",
+    "cd backend && uvicorn main:app --host 0.0.0.0 --port 8000"
+  ],
+  "env": [
+    {
+      "name": "DATABRICKS_HOST",
+      "value": "{{workspace.host}}"
+    },
+    {
+      "name": "DATABRICKS_TOKEN",
+      "value": "{{secrets.dash_crm_secrets.databricks_token}}"
+    },
+    {
+      "name": "FRONTEND_URL",
+      "value": "{{app.url}}"
+    }
+  ]
+}

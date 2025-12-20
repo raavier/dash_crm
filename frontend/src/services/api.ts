@@ -1,19 +1,15 @@
 import axios from 'axios';
 
+// Em produção no Databricks Apps, o backend está no mesmo host
+// Em desenvolvimento local, usa localhost:8001
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || (
+    import.meta.env.PROD ? '' : 'http://localhost:8001'
+  ),
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Interceptor para adicionar token Databricks
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('databricks_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  timeout: 30000, // 30s timeout (queries podem demorar no primeiro request)
 });
 
 // Interceptor para tratamento de erros

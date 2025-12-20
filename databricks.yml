@@ -1,9 +1,23 @@
 # This is a Databricks asset bundle definition for dash_crm.
-# The Databricks extension requires databricks.yml configuration file.
 # See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
 
 bundle:
   name: dash_crm
+
+# Define the app configuration
+resources:
+  apps:
+    dash_crm:
+      name: dash_crm
+      description: "Dashboard CRM com Chatbot integrado - Vale"
+
+      # Resources já configurados na UI
+      resources:
+        - name: sql-warehouse
+          permission: CAN_USE
+
+        - name: serving-endpoint
+          permission: CAN_QUERY
 
 targets:
   dev:
@@ -13,7 +27,7 @@ targets:
       host: https://adb-116288240407984.4.azuredatabricks.net
 
   ## Optionally, there could be 'staging' or 'prod' targets here.
-  #
   # prod:
+  #   mode: production
   #   workspace:
   #     host: https://adb-116288240407984.4.azuredatabricks.net

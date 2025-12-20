@@ -41,7 +41,7 @@ const ActionPriorityChart = () => {
               borderRadius: '8px',
               padding: '12px',
             }}
-            formatter={(value: number) => [`${value} ações`, 'Total']}
+            formatter={(value: number | undefined) => [`${value ?? 0} ações`, 'Total']}
           />
           <Bar dataKey="value" radius={[0, 8, 8, 0]}>
             {chartData.map((entry, index) => (
