@@ -7,15 +7,23 @@
   "env": [
     {
       "name": "DATABRICKS_HOST",
-      "value": "{{workspace.host}}"
+      "value": "adb-116288240407984.4.azuredatabricks.net"
     },
     {
-      "name": "DATABRICKS_TOKEN",
-      "value": "{{secrets.dash_crm_secrets.databricks_token}}"
+      "name": "DATABRICKS_HTTP_PATH",
+      "value": "/sql/1.0/warehouses/4d81765d86b13aa1"
     },
     {
       "name": "FRONTEND_URL",
       "value": "{{app.url}}"
+    },
+    {
+      "name": "CATALOG",
+      "value": "hs_franquia"
+    },
+    {
+      "name": "SCHEMA_GOLD",
+      "value": "gold_connect_bot"
     }
   ]
 }
