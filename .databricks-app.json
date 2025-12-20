@@ -15,12 +15,7 @@
     },
     {
       "name": "DATABRICKS_TOKEN",
-      "valueFrom": {
-        "secretKeyRef": {
-          "scope": "connectdata-kv-prd",
-          "key": "cnx-databricks-hs-community"
-        }
-      }
+      "value": "{{secrets/connectdata-kv-prd/cnx-databricks-hs-community}}"
     },
     {
       "name": "FRONTEND_URL",
