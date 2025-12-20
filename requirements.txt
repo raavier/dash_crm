@@ -1,21 +1,14 @@
-# Backend API
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-httpx==0.25.2
-pydantic==2.5.0
-pydantic-settings==2.1.0
-python-dotenv==1.0.0
-cachetools==5.3.2
+# Backend API - Runtime essentials
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
+cachetools>=5.3.0
 
-# Databricks
-databricks-sql-connector==3.0.3
-databricks-connect==16.4.10
-databricks-sdk>=0.23.0
+# Databricks - Runtime only (não precisa databricks-connect em produção)
+databricks-sql-connector>=3.0.0
 
 # Data processing
 pandas>=2.0.0
-numpy>=1.24.0
-
-# Testing (optional for production)
-pytest==7.4.3
-pytest-asyncio==0.21.1
