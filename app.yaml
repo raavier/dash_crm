@@ -11,7 +11,7 @@ env:
     value: "adb-116288240407984.4.azuredatabricks.net"
   
   - name: DATABRICKS_HTTP_PATH
-    value: "/sql/1.0/warehouses/your_warehouse_id"
+    value: "/sql/1.0/warehouses/4d81765d86b13aa1"
   
   - name: FRONTEND_URL
     value: "{{app.url}}"
