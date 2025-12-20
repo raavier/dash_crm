@@ -9,17 +9,21 @@ command:
 env:
   - name: DATABRICKS_HOST
     value: "adb-116288240407984.4.azuredatabricks.net"
-  
+
   - name: DATABRICKS_HTTP_PATH
     value: "/sql/1.0/warehouses/4d81765d86b13aa1"
-  
+
+  - name: DATABRICKS_TOKEN
+    valueFrom:
+      secretKeyRef:
+        scope: "connectdata-kv-prd"
+        key: "cnx-databricks-hs-community"
+
   - name: FRONTEND_URL
     value: "{{app.url}}"
-  
+
   - name: CATALOG
     value: "hs_franquia"
-  
+
   - name: SCHEMA_GOLD
     value: "gold_connect_bot"
-
-# Databricks token será obtido via dbutils.secrets.get() no código

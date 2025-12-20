@@ -7,29 +7,45 @@ from typing import Optional
 import os
 
 
-def get_databricks_token() -> str:
+def get_databricks_token_from_secrets() -> Optional[str]:
     """
-    Get Databricks token from secrets or environment variable.
-    In production (Databricks Apps), uses dbutils.secrets.get().
-    In development, uses environment variable.
+    Get Databricks token from secrets using REST API.
+
+    In Databricks Apps, we need to use the REST API to access secrets,
+    not dbutils (which requires Spark and is not available in Apps).
+
+    This requires the app to have permission to read from the secret scope.
     """
     try:
-        # Try to import dbutils (available in Databricks runtime)
-        from pyspark.dbutils import DBUtils
-        from pyspark.sql import SparkSession
+        import httpx
 
-        spark = SparkSession.builder.getOrCreate()
-        dbutils = DBUtils(spark)
+        # Get the workspace host from environment
+        host = os.getenv("DATABRICKS_HOST")
+        if not host:
+            return None
 
-        # Get token from secret scope
-        token = dbutils.secrets.get(scope="connectdata-kv-prd", key="cnx-databricks-hs-community")
-        return token
-    except ImportError:
-        # Running locally, use environment variable
-        token = os.getenv("DATABRICKS_TOKEN")
-        if not token:
-            raise ValueError("DATABRICKS_TOKEN not found in environment variables")
-        return token
+        # Try to get token using Databricks Apps service principal
+        # In Apps, there should be a DATABRICKS_TOKEN env var automatically set
+        service_token = os.getenv("DATABRICKS_TOKEN")
+        if not service_token:
+            return None
+
+        # Use REST API to get secret
+        url = f"https://{host}/api/2.0/secrets/get"
+        headers = {"Authorization": f"Bearer {service_token}"}
+        params = {
+            "scope": "connectdata-kv-prd",
+            "key": "cnx-databricks-hs-community"
+        }
+
+        response = httpx.get(url, headers=headers, params=params, timeout=10.0)
+        if response.status_code == 200:
+            return response.json().get("value")
+
+        return None
+    except Exception as e:
+        print(f"Debug: Failed to get token from secrets API: {e}")
+        return None
 
 
 class Settings(BaseSettings):
@@ -71,30 +87,40 @@ settings = Settings()
 # Token cache to avoid multiple dbutils calls
 _token_cache = None
 
-def get_token():
+def get_token() -> str:
     """
     Get Databricks token lazily.
     This function is called instead of accessing settings.databricks_token directly.
-    It fetches the token on first use to avoid dbutils import errors at startup.
+    It fetches the token on first use to avoid import errors at startup.
+
+    Priority order:
+    1. Cached token (from previous call)
+    2. Environment variable DATABRICKS_TOKEN
+    3. Secrets API (if running in Databricks Apps with service principal)
     """
     global _token_cache
 
     if _token_cache is not None:
         return _token_cache
 
-    # Try to get from settings first (might be set via env var)
-    if settings.databricks_token:
-        _token_cache = settings.databricks_token
-        return _token_cache
+    print("Debug: get_token() called, attempting to fetch token...")
 
-    # Try to get from dbutils
-    try:
-        _token_cache = get_databricks_token()
-        settings.databricks_token = _token_cache
-        return _token_cache
-    except Exception as e:
-        # If we can't get the token from dbutils, try from env
-        print(f"Warning: Could not get token from dbutils: {e}")
-        _token_cache = os.getenv("DATABRICKS_TOKEN", "")
-        settings.databricks_token = _token_cache
-        return _token_cache
+    # Try to get from environment variable first (most reliable)
+    env_token = os.getenv("DATABRICKS_TOKEN")
+    if env_token:
+        print("Debug: Token found in DATABRICKS_TOKEN environment variable")
+        _token_cache = env_token
+        settings.databricks_token = env_token
+        return env_token
+
+    # Try to get from secrets API (for Apps with service principal)
+    secrets_token = get_databricks_token_from_secrets()
+    if secrets_token:
+        print("Debug: Token retrieved from Databricks Secrets API")
+        _token_cache = secrets_token
+        settings.databricks_token = secrets_token
+        return secrets_token
+
+    # Fallback to empty string (will fail when actually trying to connect)
+    print("Warning: No Databricks token found. Queries will fail.")
+    return ""
