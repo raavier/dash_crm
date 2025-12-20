@@ -9,4 +9,4 @@ cachetools==5.5.0
 # Databricks - Runtime only
 databricks-sql-connector==3.5.0
 
-# Force reinstall
+# Force reinstall v2 - pip module issue fix
