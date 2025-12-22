@@ -39,11 +39,11 @@ async def send_chat_message(request: ChatRequest):
 
         # Get token using SDK Config (same pattern as database.py)
         cfg = Config()
-        token = cfg.authenticate()
+        auth_headers = cfg.authenticate()  # Returns dict with Authorization header
 
         # Headers com token Databricks
         headers = {
-            "Authorization": f"Bearer {token}",
+            **auth_headers,  # Merge auth headers (already has Authorization)
             "Content-Type": "application/json"
         }
 
