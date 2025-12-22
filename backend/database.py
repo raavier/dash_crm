@@ -1,11 +1,12 @@
 """
 Databricks SQL connection management.
-Provides connection pooling and query execution utilities.
+Follows official Databricks template pattern for auth and connection management.
 """
+from databricks.sdk.core import Config
 from databricks import sql
 from typing import List, Dict, Any, Optional
 from contextlib import contextmanager
-from config import settings, get_token
+import os
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -13,17 +14,40 @@ logger = logging.getLogger(__name__)
 
 
 class DatabricksConnection:
-    """Manages Databricks SQL connections and query execution."""
+    """Manages Databricks SQL connections using official SDK pattern."""
 
     def __init__(self):
-        self.server_hostname = settings.databricks_host
-        self.http_path = settings.databricks_http_path
-        self.access_token = get_token()
+        """
+        Initialize connection using Databricks SDK Config.
+
+        Config auto-detects authentication from:
+        - Environment variables (DATABRICKS_HOST, DATABRICKS_TOKEN, etc.)
+        - Databricks Apps managed auth
+        - .databrickscfg file
+        """
+        try:
+            # Use SDK Config (auto-detects env vars and auth)
+            self.cfg = Config()
+            self.warehouse_id = os.getenv('DATABRICKS_WAREHOUSE_ID')
+
+            if not self.warehouse_id:
+                raise ValueError(
+                    "DATABRICKS_WAREHOUSE_ID environment variable must be set. "
+                    "Check app.yaml configuration."
+                )
+
+            logger.info(f"Initialized Databricks connection - Warehouse: {self.warehouse_id}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Databricks connection: {str(e)}")
+            raise
 
     @contextmanager
     def get_connection(self):
         """
         Context manager for Databricks SQL connections.
+
+        Uses credentials_provider for auto-renewing tokens - critical for
+        long-running queries that may exceed token expiration time.
 
         Usage:
             with db.get_connection() as conn:
@@ -32,11 +56,14 @@ class DatabricksConnection:
         """
         connection = None
         try:
-            logger.info("Connecting to Databricks...")
+            logger.info("Connecting to Databricks SQL Warehouse...")
             connection = sql.connect(
-                server_hostname=self.server_hostname,
-                http_path=self.http_path,
-                access_token=self.access_token
+                server_hostname=self.cfg.host,
+                http_path=f"/sql/1.0/warehouses/{self.warehouse_id}",
+                credentials_provider=lambda: self.cfg.authenticate,
+                # Timeout configuration
+                _socket_timeout=90,  # 90s socket timeout
+                _retry_stop_after_attempts_count=2  # Retry failed requests 2x
             )
             logger.info("Connected to Databricks successfully")
             yield connection
@@ -58,31 +85,32 @@ class DatabricksConnection:
 
         Returns:
             List of dictionaries with column names as keys
+
+        Raises:
+            Exception: If query execution fails
         """
         try:
             with self.get_connection() as conn:
-                cursor = conn.cursor()
+                with conn.cursor() as cursor:
+                    # Execute query with parameters if provided
+                    if parameters:
+                        cursor.execute(query, parameters)
+                    else:
+                        cursor.execute(query)
 
-                if parameters:
-                    cursor.execute(query, parameters)
-                else:
-                    cursor.execute(query)
+                    # Get column names from cursor description
+                    columns = [desc[0] for desc in cursor.description]
 
-                # Get column names
-                columns = [desc[0] for desc in cursor.description]
+                    # Fetch all rows and convert to dictionaries
+                    rows = cursor.fetchall()
+                    results = [dict(zip(columns, row)) for row in rows]
 
-                # Fetch all rows and convert to dictionaries
-                rows = cursor.fetchall()
-                results = [dict(zip(columns, row)) for row in rows]
-
-                cursor.close()
-
-                logger.info(f"Query executed successfully. Returned {len(results)} rows")
-                return results
+                    logger.info(f"Query executed successfully. Returned {len(results)} rows")
+                    return results
 
         except Exception as e:
             logger.error(f"Error executing query: {str(e)}")
-            logger.error(f"Query: {query}")
+            logger.error(f"Query: {query[:200]}...")  # Log first 200 chars only
             raise
 
     def execute_query_single(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:

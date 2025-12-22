@@ -9,10 +9,8 @@ import os
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # Databricks connection
+    # Databricks connection (managed by databricks-sdk Config)
     databricks_host: str
-    databricks_http_path: str
-    databricks_token: str = ""  # Will be set after initialization
 
     # API settings
     api_host: str = "0.0.0.0"
@@ -42,28 +40,5 @@ class Settings(BaseSettings):
 # Global settings instance
 settings = Settings()
 
-# Token cache
-_token_cache = None
-
-def get_token() -> str:
-    """
-    Get Databricks token from environment variable.
-
-    The token is automatically injected by Databricks Apps from the
-    configured secret resource (resource key: 'secret').
-    """
-    global _token_cache
-
-    if _token_cache is not None:
-        return _token_cache
-
-    # Token is injected by Databricks Apps from secret resource
-    env_token = os.getenv("DATABRICKS_TOKEN", "")
-    if env_token:
-        _token_cache = env_token
-        settings.databricks_token = env_token
-        return env_token
-
-    # If no token found, return empty (will fail on first query)
-    print("Warning: DATABRICKS_TOKEN environment variable not set")
-    return ""
+# Note: Token management is now handled by databricks.sdk.core.Config
+# in database.py using credentials_provider for auto-renewing tokens

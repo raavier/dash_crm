@@ -4,7 +4,7 @@ Chatbot API routes - Proxy para Databricks MLFlow Serving Endpoint
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import httpx
-from config import settings, get_token
+from databricks.sdk.core import Config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -37,9 +37,13 @@ async def send_chat_message(request: ChatRequest):
     try:
         logger.info(f"Chat message - User: {request.user_id}, Query: {request.query[:50]}...")
 
+        # Get token using SDK Config (same pattern as database.py)
+        cfg = Config()
+        token = cfg.authenticate()
+
         # Headers com token Databricks
         headers = {
-            "Authorization": f"Bearer {get_token()}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
 
@@ -59,7 +63,7 @@ async def send_chat_message(request: ChatRequest):
                 "https://adb-116288240407984.4.azuredatabricks.net/serving-endpoints/connect_bot_prd/invocations",
                 headers=headers,
                 json=payload,
-                timeout=30.0
+                timeout=90.0  # Increased from 30s to 90s
             )
             response.raise_for_status()
 
