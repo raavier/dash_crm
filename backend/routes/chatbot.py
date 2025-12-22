@@ -76,8 +76,18 @@ async def send_chat_message(request: ChatRequest):
 
         return ChatResponse(response=content)
 
-    except httpx.HTTPError as e:
+    except httpx.HTTPStatusError as e:
+        # Log full error response for debugging
+        error_body = e.response.text if hasattr(e.response, 'text') else str(e)
         logger.error(f"Error calling Databricks endpoint: {str(e)}")
+        logger.error(f"Response status: {e.response.status_code}")
+        logger.error(f"Response body: {error_body}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Error communicating with chatbot service: {error_body}"
+        )
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP Error calling Databricks endpoint: {str(e)}")
         raise HTTPException(
             status_code=502,
             detail=f"Error communicating with chatbot service: {str(e)}"
