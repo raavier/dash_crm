@@ -8,6 +8,11 @@ backend/.env.local
 frontend/.env
 frontend/.env.local
 
+# Virtual environments
+.venv/
+venv/
+backend/venv/
+
 # Sensitive files
 **/*.env
 !**/.env.example
@@ -16,4 +21,5 @@ frontend/.env.local
 check_teste_app.py
 deploy_app.py
 get_app_logs.py
+DEPLOY_RESUMO.md
 nul

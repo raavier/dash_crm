@@ -37,6 +37,15 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
+# Load .env manually if not in environment (for local development)
+if not os.getenv('DATABRICKS_WAREHOUSE_ID'):
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+    # Try parent directory if not found in backend/
+    if not os.getenv('DATABRICKS_WAREHOUSE_ID'):
+        load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+
 # Global settings instance
 settings = Settings()
 
