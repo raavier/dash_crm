@@ -50,7 +50,7 @@ class DashboardService:
 
         # Location filter
         if filters.location:
-            conditions.append("loc.TEXT_PT = :location")
+            conditions.append("loc.H_01 = :location")
             params['location'] = filters.location
 
         # Verification type filter
@@ -328,10 +328,10 @@ class DashboardService:
 
         UNION ALL
 
-        SELECT 'location' as filter_type, loc.TEXT_PT as value
+        SELECT 'location' as filter_type, loc.H_01 as value
         FROM {self.catalog}.{self.schema}.vw_crm_location loc
-        WHERE loc.TEXT_PT IS NOT NULL
-        GROUP BY loc.TEXT_PT
+        WHERE loc.H_01 IS NOT NULL
+        GROUP BY loc.H_01
 
         UNION ALL
 

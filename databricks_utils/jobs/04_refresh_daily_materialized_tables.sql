@@ -18,7 +18,7 @@ INSERT INTO hs_franquia.gold_connect_bot.crm_metrics_daily
 SELECT
   DATE(v.VERIFICATION_DATE) as data_referencia,
   org.uo_level_03 as organizacao,
-  loc.TEXT_PT as localizacao,
+  loc.H_01 as localizacao,
   v.TYPE as tipo_verificacao,
 
   -- Verificações
@@ -46,7 +46,7 @@ WHERE v.VERIFICATION_DATE >= DATE_SUB(CURRENT_DATE(), 7)
 GROUP BY
   DATE(v.VERIFICATION_DATE),
   org.uo_level_03,
-  loc.TEXT_PT,
+  loc.H_01,
   v.TYPE;
 
 -- Optimize
@@ -68,7 +68,7 @@ INSERT INTO hs_franquia.gold_connect_bot.crm_action_priorities_daily
 SELECT
   CURRENT_DATE() as data_referencia,
   org.uo_level_03 as organizacao,
-  loc.TEXT_PT as localizacao,
+  loc.H_01 as localizacao,
   v.TYPE as tipo_verificacao,
 
   CASE
@@ -96,7 +96,7 @@ WHERE a.COMPLETED_DATE IS NULL
 
 GROUP BY
   org.uo_level_03,
-  loc.TEXT_PT,
+  loc.H_01,
   v.TYPE,
   CASE
     WHEN a.END_DATE < CURRENT_DATE() AND a.COMPLETED_DATE IS NULL THEN 'Vencidas'
@@ -137,7 +137,7 @@ SELECT
   END as status_acao,
   COALESCE(a.TYPE, 'N/A') as tipo,
   org.uo_level_03 as organizacao,
-  loc.TEXT_PT as localizacao,
+  loc.H_01 as localizacao,
   v.TYPE as tipo_verificacao
 
 FROM hs_franquia.gold_connect_bot.vw_crm_action a

@@ -43,7 +43,7 @@ SELECT
   END as status_acao,
   COALESCE(a.TYPE, 'N/A') as tipo,
   org.uo_level_03 as organizacao,
-  loc.TEXT_PT as localizacao,
+  loc.H_01 as localizacao,
   v.TYPE as tipo_verificacao
 
 FROM hs_franquia.gold_connect_bot.vw_crm_action a

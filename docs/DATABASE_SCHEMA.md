@@ -201,7 +201,7 @@ Cadastro hierárquico de localizações geográficas. Estrutura em árvore de at
 | ID | string (UUID) | Identificador único |
 | ID_SAP | int | Código SAP |
 | ID_SITE | int | Identificador do site |
-| TEXT_PT | string | Nome em português |
+| H_01 | string | Nome em português (nível 1 hierarquia) |
 | TEXT_EN | string | Nome em inglês |
 | LATITUDE | float | Coordenada geográfica |
 | LONGITUDE | float | Coordenada geográfica |
@@ -445,7 +445,7 @@ WHERE org.uo_level_03 = 'Nome da UO'
 ```sql
 JOIN hs_franquia.gold_connect_bot.vw_crm_location loc
   ON v.SITE_ID = loc.ID_SITE
-WHERE loc.TEXT_PT = 'Nome do Local'
+WHERE loc.H_01 = 'Nome do Local'
 ```
 
 **Por tipo de verificação**:
