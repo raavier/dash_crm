@@ -60,7 +60,7 @@ async def send_chat_message(request: ChatRequest):
         # Request para Databricks MLFlow endpoint
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://adb-116288240407984.4.azuredatabricks.net/serving-endpoints/connect_bot_prd/invocations",
+                "https://adb-116288240407984.4.azuredatabricks.net/serving-endpoints/connect_bot_dev/invocations",
                 headers=headers,
                 json=payload,
                 timeout=90.0  # Increased from 30s to 90s
