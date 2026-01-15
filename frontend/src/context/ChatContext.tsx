@@ -80,13 +80,22 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
+
+      // Extrai mensagem de erro do backend (se disponível)
+      let errorContent = 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.';
+
+      if (error.response?.data?.detail) {
+        errorContent = error.response.data.detail;
+      } else if (error.response?.status === 504) {
+        errorContent = 'O chatbot está inicializando. Por favor, aguarde alguns instantes e tente novamente.';
+      }
 
       // Mensagem de erro
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.',
+        content: errorContent,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);

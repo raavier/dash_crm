@@ -61,13 +61,14 @@ async def send_chat_message(request: ChatRequest):
         logger.info(f"[CHATBOT] Calling endpoint: connect_bot_dev")
 
         # Request para Databricks MLFlow endpoint
+        # Timeout maior para cold start (primeira chamada do dia pode demorar 2-3min)
         async with httpx.AsyncClient() as client:
             logger.info("[CHATBOT] Sending POST request...")
             response = await client.post(
                 "https://adb-116288240407984.4.azuredatabricks.net/serving-endpoints/connect_bot_dev/invocations",
                 headers=headers,
                 json=payload,
-                timeout=90.0  # Increased from 30s to 90s
+                timeout=180.0  # 3 minutes for cold start
             )
             logger.info(f"[CHATBOT] Response status: {response.status_code}")
             response.raise_for_status()
@@ -95,6 +96,13 @@ async def send_chat_message(request: ChatRequest):
         raise HTTPException(
             status_code=502,
             detail=f"Error communicating with chatbot service: {error_body}"
+        )
+    except httpx.ReadTimeout as e:
+        logger.warning(f"[CHATBOT] ReadTimeout after 3 minutes - endpoint may be cold starting")
+        logger.warning(f"[CHATBOT] User: {request.user_id}, Query: {request.query[:50]}")
+        raise HTTPException(
+            status_code=504,
+            detail="O chatbot está inicializando (cold start). Por favor, aguarde alguns instantes e tente novamente."
         )
     except httpx.HTTPError as e:
         logger.error(f"[CHATBOT] HTTPError: {str(e)}")
